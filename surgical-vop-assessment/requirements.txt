@@ -1,0 +1,11 @@
+# Surgical VOP Assessment App - Minimal Dependencies
+# Optimized for deployment size (<8GB)
+
+streamlit==1.28.0
+pillow==10.0.0
+pandas==2.0.3
+numpy==1.24.3
+requests==2.31.0
+tenacity>=8.2.3,<9
+google-genai>=2.18.0
+reportlab==5.0.0

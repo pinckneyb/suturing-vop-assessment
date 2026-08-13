@@ -1,0 +1,281 @@
+) Goal
+
+Replace the current “skills rubric” behavior with a DOCX-aligned checklist engine:
+
+Outputs the same 14 items as the surgeon form:
+1–11: Yes/No
+12: Economy 1–5
+13: Proficiency Yes/No
+14: Comments text
+
+Uses surgeon-aligned operational definitions:
+
+Spacing is judged as “consistent / good approximation / no gaping,” not literal “1 mm.”
+
+Technique steps that mention a specific instrument or method (double-armed, right-angle pass, toe trim) are scored by intent/outcome and allow equivalence.
+
+Non-observable steps are treated as YES (per user policy), but must be tagged as “assumed” in evidence.
+
+Proficiency is derived mechanically from the checklist (deterministic), not a separate “model opinion.”
+
+2) Data model (canonical JSON schema)
+
+Create a single canonical schema. Reject/redo any model output that doesn’t validate.
+
+{
+  "case_id": "2018_818",
+  "rubric_version": "vop_docx_v3",
+  "scoring_policies": {
+    "non_observable_defaults_to_yes": true,
+    "spacing_rule": "consistent_no_gaping",
+    "technique_equivalence_enabled": true
+  },
+  "items": [
+    {
+      "item_id": 1,
+      "label": "Oblique incision 2x graft diameter with #11",
+      "score": "YES",
+      "observability": "ASSUMED",
+      "evidence": "Video begins after arteriotomy; arteriotomy appears appropriate for sewing with no forced enlargement."
+    },
+    ...
+    {
+      "item_id": 12,
+      "label": "Economy of Time and Motion",
+      "score": 3,
+      "observability": "OBSERVED",
+      "evidence": {
+        "wasted_motion_events": [
+          "Event 1 ...",
+          "Event 2 ..."
+        ],
+        "flow_organization": "organized|mixed|disorganized",
+        "notes": "Do not penalize slow pace unless it causes wasted motion."
+      }
+    },
+    {
+      "item_id": 13,
+      "label": "Final Rating / Demonstrates Proficiency",
+      "score": "YES",
+      "observability": "DERIVED",
+      "evidence": "Derived by rule: all required checklist items satisfied under current policy."
+    },
+    {
+      "item_id": 14,
+      "label": "Other Summative Comments",
+      "score": "Free text...",
+      "observability": "OBSERVED"
+    }
+  ],
+  "diagnostics": {
+    "validation_passed": true,
+    "notes": []
+  }
+}
+
+Field rules:
+
+score for items 1–11: only YES or NO (no “Unable” in final output if your policy is “non-observable = YES”).
+
+Instead, use observability:
+
+OBSERVED: video evidence present
+
+ASSUMED: not observable, defaulted to YES under policy
+
+DERIVED: computed (item 13)
+
+Items 12 score: integer 1–5.
+
+Items 14: free text.
+
+3) Operational definitions to implement (key changes)
+3.1 Spacing rule update (Items 8 and 10)
+
+Replace “~1 mm” with “consistent / no gaping.”
+
+Score YES if:
+
+Stitching is reasonably consistent AND
+
+Vessel edges are approximated without visible gaps/dog-ears AND
+
+No obvious leak-risk gaps or edge mismatch.
+
+Score NO only if:
+
+Spacing is clearly irregular AND causes visible gaping/malapposition OR
+
+Large gaps/edge mismatch that would plausibly leak/stenose.
+
+Hard prohibition:
+
+The model must not claim numeric millimeter spacing unless it cites a measurement proxy visible in-frame (e.g., known needle width) and even then it must downgrade confidence. Easiest: forbid numeric mm estimates entirely.
+
+3.2 Technique equivalence (Items 5, 7, 9)
+
+Implement as outcome/intent rather than literal method enforcement.
+
+Item 5 (heel establishment):
+
+YES if heel is correctly established and remains aligned, regardless of single vs double-armed start.
+
+NO only if heel alignment is wrong/unstable and not corrected.
+
+Item 7 (right-angle pass / transfer):
+
+YES if safe progression to the opposite side occurs OR if the method makes the “pass” irrelevant (single-armed continuous) and there is no twist/malalignment and the back wall is completed appropriately.
+
+NO only if failure to transfer/progress causes twist/malalignment/inability to complete correctly, or if transfer attempt is unsafe and consequential.
+
+Item 9 (toe trimming):
+
+YES if toe/apex fit is appropriate, whether trimming is observed or not.
+
+NO only if toe/apex fit is clearly inappropriate (redundancy/shortage) and not corrected.
+
+4) Deterministic proficiency rule (Item 13)
+
+Make Item 13 computed in code, not judged by the model.
+
+Recommended apples-to-apples rule for your dataset:
+
+Proficiency = YES if:
+
+Items 2, 8, 10, 11 are YES (core technical safety/outcome gates), AND
+
+All other items 1–11 are YES OR ASSUMED YES (under your policy), AND
+
+Economy (item 12) does not gate proficiency.
+
+Proficiency = NO if:
+
+Any of the core gates (2, 8, 10, 11) are NO, OR
+
+Two or more other observed items are NO (optional stricter threshold; keep configurable).
+
+Make the gating list and threshold config-driven:
+
+coreGates = [2,8,10,11]
+maxNonCoreObservedNo = 1
+5) Economy scoring: make it auditable and less drift-prone
+
+Add two constraints to the prompt and enforce in validation:
+
+Require “wasted motion event” list (0–5 events).
+
+Constrain score from event count + flow organization.
+
+Mapping (implement in code as a check; if violated, request a re-score):
+
+If 0–1 wasted-motion events AND flow_organization = organized → score must be 4–5
+
+If 2–3 events OR flow_organization = mixed → score must be 3
+
+If 4–5 events OR flow_organization = disorganized → score must be 1–2
+
+Also add explicit instruction:
+
+“Do not penalize slow pace unless it causes wasted motion or repeated resets.”
+
+This directly targets your observed mismatch where AI sometimes equates “slow/careful” with low economy.
+
+6) Prompt contract (what the model must do)
+
+You will likely have a “video summary / feature extractor” stage (model describes what it saw) and a “rubric scorer” stage.
+
+6.1 Rubric scorer system prompt (core)
+
+Key clauses to include (these are the discipline enforcers):
+
+“You are scoring a retrospective checklist. Only score items 1–14. Do not introduce new categories.”
+
+“Spacing is judged by consistency and approximation, not millimeters. Do not estimate mm.”
+
+“Technique steps allow equivalent methods if the intent/outcome is satisfied.”
+
+“Non-observable items default to YES and must be tagged as ASSUMED in observability with explanation.”
+
+“Return ONLY valid JSON matching the schema. No extra text.”
+
+“Item 13 will be derived by code; output a placeholder or omit it if desired.”
+
+6.2 Model output validation
+
+Server-side validation steps:
+
+JSON parse
+
+Schema validation
+
+Check allowed values
+
+Check economy constraints (event count vs score)
+
+If invalid: automatically re-prompt with “Your output violated constraints X; re-issue valid JSON only.”
+
+7) UI/UX changes (minimal but important)
+
+In the app’s display:
+
+Show surgeon-style checklist with YES/NO.
+
+Next to any YES that was “ASSUMED,” display a subtle tag (“assumed”) and allow click to see the evidence line.
+
+For economy, show the wasted motion events list.
+
+For proficiency, show: “Derived: YES because [core gates passed].”
+
+This improves trust and makes disagreement analysis easy.
+
+8) CSV comparison pipeline (surgeon vs AI)
+
+Since you have a CSV of AI scores, Replit should implement a comparator:
+
+For each case:
+
+Item-level agreement rate (1–11)
+
+Economy delta (AI - surgeon)
+
+Proficiency agreement (Y/N)
+
+Breakdown of disagreements:
+
+Observed NO vs surgeon YES (true conflict)
+
+Assumed YES vs surgeon YES (expected; not a conflict)
+
+Observed YES vs surgeon NO (rare but important)
+
+Output:
+
+Per-case report
+
+Aggregate summary across cases
+
+9) Versioning and calibration
+
+Add a version string: rubric_version = "vop_docx_v3".
+
+Store:
+
+Prompt text hash
+
+Policy config (spacing rule, non-observable policy, equivalence enabled, gating list)
+
+Model name and temperature
+
+This is essential so you can compare runs over time and know what changed.
+
+10) What this should fix immediately
+
+Eliminates “AI fails proficiency because it thinks spacing is 3–4 mm.”
+
+Eliminates “AI fails because it didn’t see a right-angle clamp.”
+
+Preserves safety: if the back wall/front wall are actually gaping or knots are intraluminal/insecure, it will still fail.
+
+Makes economy differences explainable (event list) and calibratable.
+
+If you want, paste the tech stack Replit is using (Node/TS vs Python, which LLM API, whether you already have a two-stage pipeline), and I’ll translate the above into an exact ticket list + pseudo-code functions (scoreChecklist(), deriveProficiency(), validateEconomy()), but the spec above is already enough for a competent dev to implement.

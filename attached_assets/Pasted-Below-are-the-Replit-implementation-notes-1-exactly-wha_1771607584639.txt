@@ -1,0 +1,207 @@
+Below are the Replit implementation notes: (1) exactly what to add to the FOR schema, (2) the smallest scoring-function patches for Items 8/10 (gap confidence) and Item 12 (economy without clip length), and (3) how to adjust proficiency derivation.
+
+FOR schema changes (minimal additions)
+
+Add two optional fields per wall:
+
+visible_gaps: already exists (true/false/unknown)
+
+NEW: gap_confidence: "high" | "low" | "unknown"
+
+NEW (optional but useful): gap_notes: short string (e.g., “brief view; partially obstructed”)
+
+FOR JSON snippet:
+
+{
+  "observations": {
+    "posterior_wall": {
+      "completed": true,
+      "spacing_uniformity": "mixed",
+      "visible_gaps": "unknown",
+      "gap_confidence": "unknown",
+      "gap_notes": ""
+    },
+    "anterior_wall": {
+      "completed": true,
+      "spacing_uniformity": "uniform",
+      "visible_gaps": false,
+      "gap_confidence": "high",
+      "gap_notes": ""
+    }
+  }
+}
+
+Stage-1 prompt update (Gemini) for gaps:
+
+If you mark visible_gaps=true, you must also set gap_confidence:
+
+high = clear/persistent/multiple gaps or clear malapposition
+
+low = subtle/brief/partially obscured/uncertain
+
+unknown = you can’t tell
+
+Scoring patch: Items 8 and 10 (wall scoring)
+
+Replace your current wall scorer with this logic (TypeScript-style; easy to translate).
+
+type Tri = "YES" | "NO" | "NULL";
+type Obs = "OBSERVED" | "NOT_OBSERVED";
+
+function scoreWallFunctional(wall: any, label: "posterior"|"anterior"): {score: Tri, observability: Obs, evidence: any} {
+  const completed = wall?.completed;
+  const gaps = wall?.visible_gaps;              // true|false|"unknown"|undefined
+  const gapConf = wall?.gap_confidence ?? "unknown";  // "high"|"low"|"unknown"
+  const uniform = wall?.spacing_uniformity;     // "uniform"|"mixed"|"irregular"|"unknown"
+
+  // If key fields are missing/unknown, be honest:
+  if (completed === undefined || completed === "unknown") {
+    return { score: "NULL", observability: "NOT_OBSERVED", evidence: { reason: `${label} wall completion not visible`, wall } };
+  }
+  if (uniform === undefined || uniform === "unknown") {
+    return { score: "NULL", observability: "NOT_OBSERVED", evidence: { reason: `${label} wall spacing not visible`, wall } };
+  }
+  if (gaps === undefined || gaps === "unknown") {
+    return { score: "NULL", observability: "NOT_OBSERVED", evidence: { reason: `${label} wall gaps not assessable`, wall } };
+  }
+
+  // Hard NO only for high-confidence failures:
+  if (completed === false) {
+    return { score: "NO", observability: "OBSERVED", evidence: { reason: `${label} wall not completed`, wall } };
+  }
+
+  if (gaps === true) {
+    if (gapConf === "high") {
+      return { score: "NO", observability: "OBSERVED", evidence: { reason: `${label} wall has high-confidence visible gaps/malapposition`, wall } };
+    }
+    // subtle/uncertain gaps -> NULL, not NO
+    return { score: "NULL", observability: "NOT_OBSERVED", evidence: { reason: `${label} wall possible/subtle gaps (low confidence)`, wall } };
+  }
+
+  // Irregular spacing is only an automatic NO if it is paired with malapposition.
+  // Without a malapposition signal, treat "irregular" as NULL unless you have a separate "leak-risk" field.
+  if (uniform === "irregular") {
+    return { score: "NULL", observability: "NOT_OBSERVED", evidence: { reason: `${label} wall spacing labeled irregular but no high-confidence malapposition evidence`, wall } };
+  }
+
+  // Otherwise YES:
+  return { score: "YES", observability: "OBSERVED", evidence: { reason: `${label} wall completed, no visible gaps, spacing acceptable`, wall } };
+}
+
+Drop-in mapping:
+
+Item 8 uses scoreWallFunctional(FOR.observations.posterior_wall, "posterior")
+
+Item 10 uses scoreWallFunctional(FOR.observations.anterior_wall, "anterior")
+
+Scoring patch: Economy (Item 12) without clip length
+
+Stop requiring clip_minutes. Compute an event-weighted EI directly.
+
+type EconomyType =
+  "instrument_search" | "pause_reset" | "failed_pass_sequence" | "excess_regrasp_cluster" | "other";
+
+const WEIGHTS: Record<EconomyType, number> = {
+  instrument_search: 2,
+  pause_reset: 2,
+  failed_pass_sequence: 2,
+  excess_regrasp_cluster: 1,
+  other: 1
+};
+
+function computeEconomy(econ: any): {score: number | null, evidence: any} {
+  const flow = econ?.flow_organization ?? "unknown";
+  const events = Array.isArray(econ?.wasted_motion_events) ? econ.wasted_motion_events : [];
+
+  // If there is truly no economy info, return NULL.
+  const hasAnyInfo = flow !== "unknown" || events.length > 0;
+  if (!hasAnyInfo) return { score: null, evidence: { reason: "No economy markers available", flow_organization: flow, wasted_motion_events: [] } };
+
+  // Collapse micro-adjustments: if events include many tiny "needle_reload_adjustment" entries,
+  // upstream should convert these into one "excess_regrasp_cluster" unless they caused failed_pass_sequence.
+  // Here, just compute the EI.
+  let EI = 0;
+  for (const e of events) {
+    const t = e.type as EconomyType;
+    const c = Number(e.count_estimate ?? 0);
+    if (!WEIGHTS[t] || c <= 0) continue;
+    EI += WEIGHTS[t] * c;
+  }
+
+  // Default: cap at 4 to avoid “5 inflation” (matches your hawk/dove moderation goal)
+  // If you want 5 enabled later, do it behind a flag and require EI===0.
+  let score: number;
+  if (EI <= 1) score = 4;
+  else if (EI <= 3) score = 3;
+  else if (EI <= 6) score = 2;
+  else score = 1;
+
+  return {
+    score,
+    evidence: { flow_organization: flow, wasted_motion_events: events, economy_index: EI }
+  };
+}
+
+How to store it in the evidence-based output:
+
+If score === null: item 12 score = "NULL", observability = "NOT_OBSERVED"
+
+Else: item 12 score = score, observability = "OBSERVED"
+
+Projection rule stays:
+
+If evidence-based economy is NULL, projected_docx economy = 3 with note “economy not observed; neutral projection”
+
+Proficiency derivation patch (core-domain NULL => insufficient evidence)
+
+type Proficiency3 = "PROFICIENT" | "NOT_PROFICIENT" | "INSUFFICIENT_EVIDENCE";
+
+function deriveProficiency(itemsById: Map<number, {score: Tri}>): {score: Proficiency3, evidence: any} {
+  const coreIds = [2, 8, 10, 11];
+  const missing: string[] = [];
+  const red: string[] = [];
+
+  for (const id of coreIds) {
+    const s = itemsById.get(id)?.score;
+    if (s === "NULL" || s === undefined) missing.push(`Item ${id}`);
+    if (s === "NO") red.push(`Item ${id}`);
+  }
+
+  // Heel red-line only if it is an OBSERVED defect, not mere ambiguity.
+  const item5 = itemsById.get(5)?.score;
+  if (item5 === "NO") red.push("Item 5 (observed heel defect)");
+
+  if (red.length > 0) return { score: "NOT_PROFICIENT", evidence: { red_lines_triggered: red, missing_core_domains: missing } };
+  if (missing.length > 0) return { score: "INSUFFICIENT_EVIDENCE", evidence: { red_lines_triggered: [], missing_core_domains: missing } };
+  return { score: "PROFICIENT", evidence: { red_lines_triggered: [], missing_core_domains: [] } };
+}
+
+Replit task checklist (what to implement)
+
+A) Update Stage-1 FOR schema and prompt
+
+Add gap_confidence and gap_notes to posterior_wall and anterior_wall
+
+Update Gemini prompt: if visible_gaps=true, must set gap_confidence high/low
+
+B) Update scoring functions
+
+Replace wall scoring with scoreWallFunctional
+
+Replace economy scoring with computeEconomy (no clip length)
+
+Update proficiency derivation to 3-state with core-domain NULL handling
+
+C) Update API / DB
+
+Store evidence-based and projected outputs separately
+
+Add projection mode toggle (construct/hawk/dove) without changing evidence-based scores
+
+D) Update UI
+
+Render YES/NO/NULL for items
+
+Show coverage and core observed flags
+
+Show proficiency 3-state

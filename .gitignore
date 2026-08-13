@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+config.json
+.env
+surgical_config.json
+temp_*
+temp_video_*
+temp_videos/
+*_audio.wav
+*.log
+transcript_*.md
+enhanced_*.md
+timeline_*.json
+
+# Deployment exclusions
+.cache/
+.pythonlibs/
+html_reports/
+narratives/
+pdf_reports/
+batches/
+
+# Backup files
+*_backup_*.py
+# Large trainee videos - too big for git
+surgical-vop-assessment/videos_inbox/
+surgical-vop-assessment/saved_results/
+
+# Large videos in attached assets
+attached_assets/*.m4v
+attached_assets/*.mp4
+attached_assets/*.mov
+attached_assets/*.avi

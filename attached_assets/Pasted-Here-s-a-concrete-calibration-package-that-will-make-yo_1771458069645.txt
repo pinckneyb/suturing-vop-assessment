@@ -1,0 +1,172 @@
+Here’s a concrete calibration package that will make your AI’s outputs track the retrospective surgeon checklists more closely, without turning it into a “guessing machine.” It has three parts: (1) an inference policy for off-screen steps, (2) “equivalent technique” rules for checklist items that are really proxies, and (3) a proficiency decision rule that mirrors what retrospective raters effectively do.
+
+Inference policy for off-screen steps (convert some “Unable” into “Context-Assumed Yes”)
+
+Problem you saw: Items 1, 3, 4 went “Unable” because the video started after setup. The surgeon still checked “Yes.” 
+
+vop_raw_2018 118
+
+ 
+
+2018 118
+
+Fix: allow a limited, explicit “Context-Assumed Yes” state for certain items, with strict conditions and mandatory disclosure. Then map it to “Yes” for apples-to-apples comparison while still keeping traceability.
+
+Add scoring states internally (not on the DOCX printout):
+
+OBSERVED_YES
+
+OBSERVED_NO
+
+CONTEXT_ASSUMED_YES
+
+UNABLE
+
+When reporting in DOCX format, output:
+
+“Yes” for OBSERVED_YES and CONTEXT_ASSUMED_YES (but tag the evidence field: “Assumed from context”)
+
+“No” for OBSERVED_NO
+
+“Unable to Assess” only when inference conditions fail
+
+Inference rules (only for items that are commonly off-screen and not directly safety-critical):
+
+Item 1 (arteriotomy details)
+Allow CONTEXT_ASSUMED_YES if ALL are true:
+
+The anastomosis proceeds without visible mismatch between arteriotomy length and graft heel/toe geometry (no bunching/dog-ears, no obvious short arteriotomy under tension).
+
+No signs of arteriotomy tearing or forced enlargement during suturing.
+
+The video begins with a prepared arteriotomy already suitable for sewing.
+Otherwise keep UNABLE.
+
+Item 3 (graft spatulation with Metzenbaum)
+Allow CONTEXT_ASSUMED_YES if:
+
+The graft is clearly spatulated at start (shape visible).
+
+There is no later trimming that changes the spatulation.
+Note: you cannot infer “Metzenbaum scissors” specifically unless instrument ID is visible; to stay apples-to-apples with the surgeon’s checklist, treat the core construct as “graft appropriately spatulated,” and log instrument as “not confirmed.”
+
+Item 4 (5-0 Prolene/Surgipro)
+This one is tricky: the surgeon marked “Yes,” but if you can’t see the suture label, any inference is a guess.
+Best compromise for retrospective alignment:
+
+Allow CONTEXT_ASSUMED_YES only if the training/testing environment is standardized and you have metadata that the station uses 5-0 Prolene (e.g., case header, tray list, or an on-screen slate).
+
+If no metadata, keep UNABLE, but do NOT fail proficiency solely for this item (see Part 3). This matches what many retrospective checklists implicitly do when they check “correct suture” by assumption.
+
+“Equivalent technique” rules (stop failing item 7 and item 9 when the intent is met)
+
+Problem: Surgeon “Yes” but AI “No” for item 7 (right-angle pass) and item 9 (toe trimming). 
+
+vop_raw_2018 118
+
+ 
+
+2018 118
+
+
+That suggests the surgeon is scoring intent/outcome, not literal instrument/action every time.
+
+2a) Item 7 (right-angle used to pass one end to opposite side of heel)
+Reframe item intent: “Suture end is safely transferred to the opposite side of the heel without twisting/trauma.”
+
+Score “Yes” if ANY of these are true:
+
+A right-angle is used (classic method), OR
+
+An alternative instrument is used (forceps/needle driver) to pass the suture end around/through the heel region safely, AND:
+
+No visible tissue tearing, snagging, or lumen intrusion
+
+No suture crossing/twisting that compromises heel alignment
+Score “No” only if:
+
+Transfer is not performed (surgeon continues on same side incorrectly), OR
+
+Transfer causes malalignment, twisting, or clear tissue injury/unsafe passage
+Score “Unable” if the transfer moment is fully off-screen.
+
+Important: In evidence, explicitly state whether it was “Right-angle used” vs “Equivalent safe transfer observed.”
+
+2b) Item 9 (toe trimmed to appropriate size at apex)
+Retrospective raters often check “Yes” if the toe is already appropriately shaped and no trimming is needed, even if “trims” is written.
+
+Rewrite scoring definition:
+Score “Yes” if EITHER:
+
+Trimming is observed and results in an appropriate toe/apex fit, OR
+
+No trimming is observed BUT the toe/apex fit is appropriate throughout closure (no redundancy/dog-ear, no tension-shortage, no mismatch at apex)
+Score “No” only if:
+
+Toe/apex fit is clearly inappropriate (redundancy, bunching, or shortage/tension) and is not corrected
+Score “Unable” if the apex/toe region is not visible enough to judge fit.
+
+This change alone will remove a lot of false “No” calls compared to human retrospective checklists.
+
+Proficiency decision rule to match retrospective behavior (don’t auto-fail on non-observable setup items)
+
+Your earlier “mechanical” rule (all items must be Yes) is strict and will under-call proficiency whenever the clip starts mid-procedure. That’s what happened here.
+
+Use a two-tier gating approach:
+
+Tier A: Safety/construct-critical observed gates (must be OBSERVED_YES, not assumed)
+If any are OBSERVED_NO → Proficiency = No
+Recommended gates for this procedure:
+
+Item 2 (no back wall injury) must be OBSERVED_YES
+
+Item 8 (back wall completed with acceptable spacing/approximation) must be OBSERVED_YES
+
+Item 10 (front wall completed with acceptable spacing/approximation) must be OBSERVED_YES
+
+Item 11 (final knot secure/outside) must be OBSERVED_YES
+
+Item 6 (heel knot secure/outside) should be OBSERVED_YES if visible; otherwise allow UNABLE without failing
+
+Tier B: Setup/metadata-dependent items (may be CONTEXT_ASSUMED_YES or UNABLE without auto-fail)
+
+Item 1 (arteriotomy specifics)
+
+Item 3 (spatulation instrument)
+
+Item 4 (exact suture brand/size), unless metadata confirms
+
+Proficiency = Yes if:
+
+No Tier A items are OBSERVED_NO, AND
+
+The anastomosis is completed with acceptable approximation (covered by 8/10/11), AND
+
+There is no clear technical violation elsewhere (e.g., obvious malalignment, gaping, intraluminal knots)
+
+Economy (item 12): keep as non-gating, consistent with the surgeon’s “Yes” proficiency at 3/5. 
+
+2018 118
+
+How this calibration would change your AI result on this case (likely)
+
+Items 1 and 3 would probably become CONTEXT_ASSUMED_YES (reported as “Yes” with disclosure) because the arteriotomy and spatulated graft appear already suitable for closure per the AI’s own narrative. 
+
+vop_raw_2018 118
+
+Item 9 would likely become “Yes” if apex fit looked appropriate even without trimming.
+
+Item 7 would likely become “Yes” if a safe equivalent transfer occurred.
+
+Item 4 might remain “Unable” unless you have station metadata; but it wouldn’t automatically fail proficiency under Tier B.
+Net effect: the AI’s overall proficiency call would be much more likely to match the surgeon’s “Yes,” while still refusing to “assume away” true safety issues (posterior wall injury, gaping, intraluminal knots).
+
+If you want this to be enforceable in production, I’d implement it as:
+
+a scoring schema with OBSERVED/ASSUMED/UNABLE internal flags,
+
+explicit “equivalence” clauses for items 7 and 9,
+
+a proficiency function that only gates on Tier A observed failures.
+
+That’s the shortest path to retrospective agreement without diluting the safety signal.

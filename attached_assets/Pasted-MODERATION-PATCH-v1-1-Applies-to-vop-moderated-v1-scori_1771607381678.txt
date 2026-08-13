@@ -1,0 +1,99 @@
+MODERATION PATCH v1.1
+Applies to: vop_moderated_v1 scoring rules
+
+Remove clip-length dependency from Economy (Item 12)
+Replace the Economy section with:
+
+Item 12 (Economy) – event-based, no clip-length required
+A) Evidence-based economy is computed from explicit wasted-motion events only. Do not require clip duration.
+
+Allowed wasted-motion event types:
+
+instrument_search (weight 2)
+
+pause_reset (weight 2)
+
+failed_pass_sequence (weight 2) [≥2 failed attempts before success]
+
+excess_regrasp_cluster (weight 1) [>3 regrips on same load/positioning episode]
+
+other (weight 1, only if clearly wasted)
+
+Economy Index (EI):
+EI = Σ(weight × count_estimate)
+
+Economy score mapping (default):
+
+EI 0–1 → 4
+
+EI 2–3 → 3
+
+EI 4–6 → 2
+
+EI ≥7 → 1
+Score 5 is disabled by default (set policy economy_max=4) unless you explicitly want a 5 category later.
+
+Needle micro-adjustments rule:
+Multiple small needle angle adjustments count as 1 “excess_regrasp_cluster” event at most, unless they cause a failed_pass_sequence or pause_reset.
+
+When to use NULL:
+Only set Economy = NULL if economy markers are entirely absent/unknown (no flow_organization and no events).
+
+(Projection rule stays: if Economy NULL, project 3 with a note.)
+
+Item 10 (and Item 8) – add “uncertain gaps => NULL, not NO”
+Right now the moderated scorer is capable of flipping a case to NOT_PROFICIENT based on a single “visible_gaps=true” flag that may be noisy.
+
+Replace the wall scoring rule with a 3-level confidence:
+
+For Items 8 and 10 (posterior/anterior wall):
+
+YES (OBSERVED) if:
+completed=true AND visible_gaps=false AND spacing_uniformity in {uniform, mixed}
+
+NO (OBSERVED) only if there is HIGH-CONFIDENCE failure:
+any of:
+completed=false
+visible_gaps=true AND the gaps are described as “clear / persistent / multiple” OR associated with malapposition
+spacing_uniformity=irregular AND described as “grossly irregular” with malapposition/leak-risk
+
+NULL (NOT_OBSERVED) if:
+wall completion or gap status is uncertain, briefly seen, obstructed, or described with qualifiers like “possible,” “subtle,” “hard to tell,” “momentary,” “limited view.”
+
+Implementation detail:
+Stage 1 (FOR) should include a gap_confidence field:
+visible_gaps: true|false|unknown
+gap_confidence: "high"|"low"|"unknown"
+
+Then Items 8/10 use:
+
+if visible_gaps=true and gap_confidence=high -> NO
+
+if visible_gaps=true and gap_confidence=low -> NULL
+
+If you can’t modify FOR yet:
+Use the evidence text heuristics:
+If the evidence contains “possible / subtle / hard to tell / limited view” treat as NULL not NO.
+
+Proficiency (Item 13) – core-domain NULL yields INSUFFICIENT_EVIDENCE
+Keep the 3-state proficiency rule, but align it with the new wall logic:
+
+Proficiency = NOT_PROFICIENT only if a core domain is OBSERVED NO (high-confidence).
+Proficiency = INSUFFICIENT_EVIDENCE if any core domain is NULL.
+Proficiency = PROFICIENT if all core domains are OBSERVED YES and no observed red-line heel defect.
+
+Core domains:
+
+Item 2 (injury)
+
+Item 8 (posterior wall)
+
+Item 10 (anterior wall)
+
+Item 11 (final knot)
+
+What this fixes for your 2019 1914 case
+
+If the “gaps” call was borderline/noisy, Item 10 will become NULL instead of NO, and proficiency becomes INSUFFICIENT_EVIDENCE rather than NOT_PROFICIENT (which is a much more defensible stance than declaring failure).
+
+Economy will no longer become NULL just because duration isn’t available; it will score from event evidence.

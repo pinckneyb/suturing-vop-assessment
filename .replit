@@ -1,0 +1,45 @@
+modules = ["web", "python-3.11"]
+[agent]
+expertMode = true
+integrations = ["python_gemini_ai_integrations:1.0.0", "python_gemini:1.0.0"]
+
+[nix]
+channel = "stable-25_05"
+packages = ["cairo", "ffmpeg", "ffmpeg-full", "fontconfig", "freetype", "ghostscript", "glib", "glibcLocales", "gobject-introspection", "gtk3", "harfbuzz", "lcms2", "libGL", "libGLU", "libimagequant", "libjpeg", "libsndfile", "libtiff", "libwebp", "libxcrypt", "openjpeg", "pango", "pkg-config", "qhull", "tcl", "tk", "zlib"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Vascular Anastomosis Assessment"
+
+[[workflows.workflow]]
+name = "Vascular Anastomosis Assessment"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd surgical-vop-assessment && streamlit run app_simple.py --server.port 5000 --server.address 0.0.0.0 --server.headless true"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["streamlit", "run", "surgical-vop-assessment/app_simple.py", "--server.port=5000", "--server.address=0.0.0.0", "--server.headless=true"]
+build = ["pip", "install", "-r", "surgical-vop-assessment/requirements.txt"]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 180000

@@ -1,0 +1,194 @@
+Below is a single, “drop-in” rubric spec designed to match how your surgeons are actually using the retrospective checklist: they will fail for a small set of red-line problems (e.g., anchoring at the toe) , but they will still pass performances that are “not pretty” if the technical steps/outcome are acceptable , and they do not treat some named method steps (e.g., right-angle pass) as strictly required . It also bakes in the spacing insight: surgeons comment both “too close”  and “ok to space bites further apart” , so the rubric must score spacing functionally (uniformity + approximation) rather than “mm metrology.”
+
+VOP Retrospective-Aligned Rubric Spec (drop-in) v4
+
+1. Scope and intent
+   1.1 Purpose: Generate outputs that are apples-to-apples with surgeon retrospective VOP checklists, while producing stable, auditable AI results.
+
+1.2 Key alignment principles derived from surgeon patterns
+A. Proficiency is driven by red-line failures (sequence/anchoring and clear leak/approximation risks), not perfect stylistic form. Toe anchoring can produce a “Not Proficient” even when other elements are decent .
+B. “Method” items (e.g., right-angle pass) are not always gating; surgeons may mark the method “No” yet still rate overall proficient .
+C. Spacing is not literal millimeters; surgeons coach both directions (“too close” and “space further apart”)  . Score spacing by uniformity + approximation/no gaping.
+D. Common coaching themes should be captured as structured “tags” (e.g., arteriotomy short ; spatulation geometry convex vs concave ; avoid grabbing suture with forceps/pickups ; don’t tie directly on the toe ; needle direction reversal ; use of assistant ).
+
+2. Two-stage architecture (recommended, optional but strongly stabilizing)
+   Stage 1: Factual Observation Record (FOR)
+
+* Produced by a video model (Gemini or other).
+* Must be purely descriptive: actions, sequence, visibility. No “good/bad,” no scores, no “proficient.”
+
+Stage 2: Scoring Engine
+
+* Applies this rubric deterministically wherever possible.
+* Uses a text model only for Item 14 narrative and for resolving explicit “unknown” fields (not re-watching the video).
+
+3. Global scoring policies (configurable)
+   3.1 Visibility policy
+
+* Non-observable aspects default to YES (your current policy), but MUST be flagged as ASSUMED with a short reason.
+
+3.2 Spacing policy (critical)
+
+* “Spacing” items (back wall and front wall) are scored by: consistency + approximation + gaping/leak-risk, not by millimeters.
+* Hard ban: the system must not output numeric “mm” spacing claims unless a validated measurement proxy exists (default: never output mm).
+
+3.3 Technique equivalence policy
+
+* Items phrased as a specific instrument or method are scored by intent/outcome and may be satisfied by equivalent technique, unless a red-line failure is triggered.
+
+4. Checklist items 1–14: operational definitions
+
+Items 1–4 (setup steps; often off-screen)
+
+1. Oblique incision 2x graft lumen with #11
+
+* YES if observed, or ASSUMED YES if off-screen.
+
+2. Avoids back wall injury
+
+* YES unless there is clear evidence of posterior wall catch/through-and-through injury.
+
+3. Spatulates graft (Metzenbaum on form)
+
+* YES if spatulation is visible at any point, or ASSUMED YES if off-screen and graft appears spatulated.
+
+4. Correct suture (5-0 Prolene/Surgipro)
+
+* YES if packaging/metadata confirms, else ASSUMED YES under your policy.
+
+Items 5–7 (heel strategy and progression; equivalence enabled)
+5. “Places double-ended suture at heel”
+Score by heel establishment, not by double-armed literalism.
+
+* YES if the heel is correctly established (aligned graft/artery edges) and remains stable, regardless of single- vs double-armed start.
+* NO only if the initial anchoring is at the toe (or otherwise incorrect for heel strategy) and causes difficulty coming around the heel (red-line) , or if heel alignment is clearly wrong/unstable.
+
+6. “Ties knot outside at heel”
+
+* YES if knot is outside/extraluminal and appears seated.
+
+7. “Uses right angle to pass suture end to opposite side of heel”
+   Score by safe progression to the opposite side (or method not requiring a pass).
+
+* YES if either (a) right-angle used, or (b) equivalent safe progression occurs without twist/trauma, or (c) single-armed continuous technique makes “pass the other end” irrelevant and the back wall is completed without twist.
+* NO only if lack of transfer/progression causes twist/malalignment or an inability to complete properly.
+  Note: surgeons can mark this “No” and still pass overall , so Item 7 is non-gating unless it creates downstream technical failure.
+
+Items 8–11 (product/outcome; most predictive)
+8. Back wall completion (“~1 mm apart” on form)
+Functional spacing rule:
+
+* YES if back wall is completed with reasonably uniform spacing and good edge approximation, with no visible gaping/dog-ears/leak-risk.
+* NO if spacing/needle placement causes visible gaping, edge mismatch, or major irregularity consistent with leak risk (this is one of the patterns associated with a fail when paired with other issues, like bite mismatch/unsafe handling) .
+
+9. Toe trimming at apex
+   Score by apex fit, not by whether trimming is seen.
+
+* YES if the toe/apex fit appears appropriate (no bunching/dog-ear/redundancy or tension shortage), whether or not trimming is observed.
+* NO only if apex fit is clearly inappropriate and not corrected.
+
+10. Front wall completion (“~1 mm apart” on form)
+    Same functional spacing rule as Item 8.
+
+* YES if uniform enough + well-approximated + no gaping.
+* NO if visible gaps/edge mismatch or gross irregularity consistent with leak/stenosis risk.
+
+11. Final knot secure and outside
+
+* YES if knot is outside and appears seated/secure.
+
+Item 12: Economy of Time and Motion (1–5)
+Economy is not “speed.” Do not penalize careful slowness unless it produces wasted motion (repeated resets, searching, frequent re-grasps).
+Require the scorer to output:
+
+* flow_organization: organized / mixed / disorganized
+* wasted_motion_events: up to 5 discrete events with brief descriptions
+
+Recommended mapping guardrails:
+
+* 4–5: organized + 0–1 wasted-motion events
+* 3: mixed OR 2–3 wasted-motion events
+* 1–2: disorganized OR 4–5 wasted-motion events
+
+Item 13: Final Rating / Demonstrates Proficiency (derived in code)
+Compute in the app; do not let the model “vote.”
+Proficiency = NO if any red-line is present:
+Red-line A: Toe anchoring strategy that creates difficulty coming around heel (explicit fail pattern) 
+Red-line B: Outcome risk: visible gaping/malapposition on back or front wall (Items 8 or 10 = NO)
+Red-line C: Clear unsafe handling that threatens integrity + correlates with poor bites/spacing (e.g., grabbing the suture line with pickups + uneven bites), especially when it creates malapposition 
+Red-line D: Intraluminal knot or clearly insecure knot (Items 6 or 11 = NO)
+
+Otherwise Proficiency = YES, even if:
+
+* Item 7 method is “No” but outcome is fine 
+* The work is “not pretty” but steps/outcome are achieved 
+
+Item 14: Other Summative Comments
+Output two parts:
+A. One-sentence outcome summary (what matters clinically: approximation, heel/toe, knots).
+B. 1–3 coaching tags (see below) rendered as plain language.
+
+5. Coaching tags (structured, non-gating unless they trigger a red-line)
+   These tags are for regularization and feedback; they should not flip proficiency unless they directly produce malapposition/unsafe outcome.
+
+Recommended taxonomy (examples drawn from surgeon comments):
+
+* ARTERIOTOMY_TOO_SHORT 
+* SPATULATION_CONCAVE_GEOMETRY (recommend convex) 
+* SUTURE_GRASPED_WITH_FORCEPS_OR_PICKUPS (risk fray/integrity) 
+* TIE_DIRECTLY_ON_TOE (recommend just beyond apex) 
+* NEEDLE_DIRECTION_REVERSED (out-to-in / in-to-out mismatch) 
+* ASSISTANT_QUALITY_IMPACT (benefitted from good assistant / needs better assistant use) 
+* SPACING_TOO_CLOSE (surgeons do comment this) 
+* SPACING_CAN_BE_WIDER (surgeons also comment this) 
+
+6. Canonical output schema (what your app stores/exports)
+   Implement this as strict JSON validation; reject outputs with extra fields.
+
+```json
+{
+  "case_id": "string",
+  "rubric_version": "vop_docx_v4",
+  "policies": {
+    "non_observable_defaults_to_yes": true,
+    "spacing_rule": "consistent_no_gaping",
+    "technique_equivalence_enabled": true
+  },
+  "items": [
+    { "item_id": 1, "score": "YES", "observability": "OBSERVED|ASSUMED", "evidence": "string" },
+    ...
+    {
+      "item_id": 12,
+      "score": 1,
+      "observability": "OBSERVED",
+      "evidence": {
+        "flow_organization": "organized|mixed|disorganized",
+        "wasted_motion_events": ["string", "string"]
+      }
+    },
+    {
+      "item_id": 13,
+      "score": "YES",
+      "observability": "DERIVED",
+      "evidence": "Derived by rule: ... (list red-lines absent/present)"
+    },
+    {
+      "item_id": 14,
+      "score": "string",
+      "observability": "OBSERVED",
+      "coaching_tags": ["TAG1", "TAG2"]
+    }
+  ]
+}
+```
+
+7. Implementation notes for Replit (the “drop-in” part)
+   A. If you keep Gemini, use it only for Stage-1 factual observation JSON (FOR) and hard-ban evaluative language.
+   B. Apply this rubric in code where possible, especially Items 8/10/13/12 mappings.
+   C. Allow the LLM only to:
+
+* populate missing “evidence” strings,
+* propose coaching tags from the taxonomy,
+* write Item 14 narrative from the scored results.
+
+If you want, I can also produce a ready-to-paste “Stage-1 Gemini prompt” plus a small ruleset/pseudocode for `derive_item_scores(FOR)` and `derive_proficiency(items)` so Replit can implement without interpretation.

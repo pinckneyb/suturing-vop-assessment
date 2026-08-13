@@ -1,0 +1,204 @@
+GOAL
+Update the VOP assessment pipeline to support moderation across “hawk vs dove” surgeon styles by separating (1) observed facts from (2) scoring and by representing “not observed” as NULL (not forced to YES/NO). Add coverage metrics, an “insufficient evidence” proficiency state, a semi-quantitative Economy Index, and split Item 7 into method vs outcome internally.
+
+DELIVERABLES
+1) New internal scoring schema with tri-state item scores: YES / NO / NULL.
+2) Coverage calculation and display.
+3) Proficiency becomes a 3-state outcome: PROFICIENT / NOT_PROFICIENT / INSUFFICIENT_EVIDENCE.
+4) Economy scoring reworked to use a counted “Economy Index (EI)” derived from explicit wasted-motion events (per minute).
+5) Item 7 split internally into:
+   - 7a: RIGHT_ANGLE_METHOD (YES/NO/NULL)
+   - 7b: SAFE_TRANSFER_OUTCOME (YES/NO/NULL)
+   Then produce a “DOCX-compatible projection” mapping to the legacy single Item 7 depending on mode.
+6) Keep a DOCX-compatible “projection output” for comparing with surgeon retrospective forms, but never overwrite the evidence-based output.
+
+ARCHITECTURE
+Stage 1: Factual Observation Record (FOR JSON) from video model (Gemini or similar).
+Stage 2: Evidence-based scoring (YES/NO/NULL) from FOR, with deterministic rules + minimal LLM (optional) ONLY for narrative Item 14.
+Stage 3: Projection layer to generate DOCX-style binary outputs when needed:
+   - hawk_mode (literal method sensitive)
+   - construct_mode (middle ground, recommended default)
+   - dove_mode (more permissive where method is not required)
+
+DATA MODEL (NEW CANONICAL OUTPUT)
+Return BOTH objects: evidence_based and projected_docx.
+
+{
+  "case_id": string,
+  "rubric_version": "vop_moderated_v1",
+  "evidence_based": {
+    "items": [
+      { "item_id": 1, "score": "YES"|"NO"|"NULL", "observability": "OBSERVED"|"NOT_OBSERVED", "evidence": string },
+      ...
+      { "item_id": 7, "score": "YES"|"NO"|"NULL", "observability": "OBSERVED"|"NOT_OBSERVED", "evidence": string,
+        "subitems": {
+          "7a_right_angle_method": { "score": "YES"|"NO"|"NULL", "evidence": string },
+          "7b_safe_transfer_outcome": { "score": "YES"|"NO"|"NULL", "evidence": string }
+        }
+      },
+      { "item_id": 12,
+        "score": 1|2|3|4|5|NULL,
+        "observability": "OBSERVED"|"NOT_OBSERVED",
+        "evidence": {
+          "flow_organization": "organized"|"mixed"|"disorganized"| "unknown",
+          "wasted_motion_events": [
+            { "type": "instrument_search"|"pause_reset"|"failed_pass_sequence"|"excess_regrasp_cluster"|"other",
+              "count_estimate": number,
+              "note": string
+            }
+          ],
+          "economy_index": number,
+          "economy_index_per_min": number,
+          "clip_minutes": number
+        }
+      },
+      { "item_id": 13,
+        "score": "PROFICIENT"|"NOT_PROFICIENT"|"INSUFFICIENT_EVIDENCE",
+        "observability": "DERIVED",
+        "evidence": { "red_lines_triggered": [string], "missing_core_domains": [string] }
+      },
+      { "item_id": 14, "score": string, "observability": "OBSERVED", "evidence": { "coaching_tags": [string] } }
+    ],
+    "coverage": {
+      "observed_count": number,
+      "total_count": 11,
+      "observed_percent": number,
+      "core_observed": { "2": boolean, "8": boolean, "10": boolean, "11": boolean }
+    }
+  },
+  "projected_docx": {
+    "mode": "construct_mode"|"hawk_mode"|"dove_mode",
+    "items_1_11": { "1":"YES"|"NO", ... "11":"YES"|"NO" },
+    "economy_1_5": 1|2|3|4|5,
+    "proficiency_yes_no": "YES"|"NO",
+    "projection_notes": [string]
+  }
+}
+
+CORE RULE CHANGE: NULL / OBSERVABILITY
+- If the FOR does not clearly support a YES or NO, set score=NULL and observability=NOT_OBSERVED.
+- Do NOT convert NULL into YES/NO in evidence_based results.
+- Only the projection layer may convert NULL to YES/NO to mimic legacy DOCX comparisons.
+
+SCORING RULES (EVIDENCE-BASED)
+
+Items 1–4 (often off-screen)
+- If FOR indicates not shown or unknown -> score NULL (NOT_OBSERVED).
+- If explicitly observed -> score YES/NO accordingly.
+(No defaulting to YES anymore.)
+
+Item 2 (back wall injury)
+- YES if FOR explicitly indicates no catch/through-and-through.
+- NO if catch or through-and-through observed.
+- NULL if unknown.
+
+Item 5 (heel establishment)
+- YES if start at heel OR equivalent progression shows stable heel alignment with no twist/mismatch/gaping attributable to start.
+- NO only if OBSERVED persistent heel defect OR toe anchoring causes demonstrated heel defect.
+- NULL if initial fixation and downstream heel alignment are not visible enough to judge.
+
+Item 6 (heel knot outside)
+- YES if outside observed, NO if inside observed, NULL if unknown.
+
+Item 7 (split)
+7a RIGHT_ANGLE_METHOD:
+- YES only if right-angle instrument use is clearly observed.
+- NO if clearly not used during an otherwise visible transfer step.
+- NULL if the transfer step or instrument is not visible.
+
+7b SAFE_TRANSFER_OUTCOME:
+- YES if no twist/crossing and no tissue snag/tear and progression to opposite side is achieved (or method makes pass irrelevant and no twist).
+- NO if twist/crossing or snag/tear is observed and consequential.
+- NULL if you cannot evaluate twist/trauma/progression.
+
+Item 7 overall (evidence_based item_id=7):
+- Score derived from 7b by default:
+  - if 7b YES -> item 7 YES
+  - if 7b NO -> item 7 NO
+  - if 7b NULL -> item 7 NULL
+(Do not gate proficiency on item 7.)
+
+Items 8 and 10 (spacing/approximation functional)
+- YES if wall completed AND visible_gaps=false AND spacing_uniformity is uniform or mixed.
+- NO if not completed OR visible_gaps=true OR spacing_uniformity=irregular.
+- NULL if completion/gaps/uniformity unknown.
+
+Item 9 (toe/apex fit)
+- YES if fit appropriate and no dog-ear/redundancy.
+- NO if fit inappropriate or dog-ear/redundancy.
+- NULL if unknown.
+
+Item 11 (final knot)
+- YES if outside and seated observed.
+- NO if inside or not seated observed.
+- NULL if unknown.
+
+ECONOMY (Item 12) – NEW ECONOMY INDEX
+Compute EI from wasted-motion events (from FOR).
+- Types counted:
+  instrument_search (weight 2)
+  pause_reset (weight 2)
+  failed_pass_sequence (weight 2)
+  excess_regrasp_cluster (weight 1)
+  other (weight 1 if clearly wasted)
+- EI = sum(weight * count_estimate)
+- Normalize: EI_per_min = EI / clip_minutes (clip_minutes from metadata if available; else estimate from timestamps; if unavailable, set NULL economy and NOT_OBSERVED)
+Map EI_per_min to 1–5:
+- 0.0–0.5 -> 4
+- 0.5–1.5 -> 3
+- 1.5–3.0 -> 2
+- >3.0 -> 1
+Score 5 only if EI=0 AND flow_organization=organized AND no pauses/resets/search (rare; can be disabled)
+If economy markers are unknown -> score NULL.
+
+PROFICIENCY (Item 13) – 3-STATE
+Define “core domains” for proficiency:
+- Item 2 (injury)
+- Item 8 (posterior wall outcome)
+- Item 10 (anterior wall outcome)
+- Item 11 (final knot)
+
+Rule:
+- NOT_PROFICIENT if ANY core domain is observed NO.
+- PROFICIENT if ALL core domains are observed YES AND no observed red-line heel defect (Item 5 NO due to observed defect).
+- INSUFFICIENT_EVIDENCE if ANY core domain is NULL (not observed).
+Economy never affects proficiency.
+
+COVERAGE
+Compute coverage over Items 1–11:
+- observed_count = number with score != NULL
+- observed_percent = observed_count / 11
+Also compute core_observed flags for item_ids 2,8,10,11.
+
+PROJECTION LAYER (DOCX COMPARISON)
+Implement three projection modes converting NULL -> YES/NO:
+
+construct_mode (default middle ground):
+- NULL on items 1–4 -> YES (since setup is often off-screen)
+- NULL on items 2,8,10,11 (core) -> keep as “cannot project”; set proficiency_yes_no="NO" only if any observed NO; otherwise "YES"; include projection_notes “core domain not observed; projected with uncertainty”
+- Item 7 projection uses 7b (outcome), not 7a (method)
+
+hawk_mode (literal method-sensitive):
+- Item 7 = YES only if 7a=YES; if 7a NULL -> project NO
+- Other NULLs: same as construct_mode
+
+dove_mode (more permissive):
+- Item 7 = YES if 7b YES; if 7b NULL -> YES
+- Core NULLs -> YES but add projection_notes
+
+Economy projection:
+- If economy NULL, project 3 (neutral middle) and note “economy not observed; neutral projection”
+
+ACCEPTANCE TESTS
+1) For a clip that starts mid-procedure with missing setup: items 1–4 should be NULL in evidence_based, not auto-YES.
+2) For a clip where posterior wall completion is unknown: item 8 NULL and proficiency = INSUFFICIENT_EVIDENCE.
+3) Item 7 should expose both subitems; in hawk_mode, lack of right-angle visibility should lower projected Item 7 but not change evidence-based 7b.
+4) Economy should never output 5 unless EI=0 and flow organized; “needle micro-adjustments” alone should not inflate EI into a low score unless it’s a failed_pass_sequence or pause_reset.
+5) Provide both outputs in API response and store both in DB.
+
+UI CHANGES
+- Display evidence-based YES/NO/NULL with an “Observed” or “Not observed” badge.
+- Display Coverage % and core observed flags.
+- Display Proficiency as PROFICIENT / NOT_PROFICIENT / INSUFFICIENT_EVIDENCE.
+- For Item 7 show method vs outcome explicitly.
+- Provide a toggle to view projected_docx (construct/hawk/dove) for comparison and audit.

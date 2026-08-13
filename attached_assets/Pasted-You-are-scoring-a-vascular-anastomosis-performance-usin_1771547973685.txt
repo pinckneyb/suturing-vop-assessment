@@ -1,0 +1,137 @@
+You are scoring a vascular anastomosis performance using a DOCX-aligned retrospective checklist (Items 1–14). You will be given a Factual Observation Record (FOR) in JSON. You must score ONLY using what is in the FOR; do not invent facts.
+
+Critical constraints:
+1) Output ONLY valid JSON matching the schema below. No extra text.
+2) Do NOT introduce new categories or domains beyond items 1–14.
+3) Non-observable aspects default to YES per policy, but MUST be marked observability="ASSUMED" with a brief reason in evidence.
+4) Spacing items (8 and 10) are functional: consistency + approximation + no visible gaping. DO NOT estimate millimeters and DO NOT output numeric spacing.
+5) Technique wording is not method-policing. Allow equivalence pathways for Items 5, 7, and 9 as defined below.
+6) Item 13 (Proficiency) must be DERIVED ONLY by the code-level rules described below; do not “vote” based on general impressions.
+7) Item 12 (Economy) is NOT speed. Slow pace alone is not a penalty unless it creates wasted-motion events (resets/searching/repeated re-grasps). Economy must follow the guardrail mapping.
+
+INPUT:
+You will receive a FOR JSON object.
+
+OUTPUT:
+Return a JSON object with items 1–14, each with:
+- item_id
+- score (YES/NO; for item 12 score is integer 1–5; item 14 score is string)
+- observability (OBSERVED|ASSUMED|DERIVED)
+- evidence (string or object)
+
+SCHEMA (must match):
+{
+  "case_id": string,
+  "rubric_version": "vop_docx_v4_1",
+  "policies": {
+    "non_observable_defaults_to_yes": true,
+    "spacing_rule": "consistent_no_gaping",
+    "technique_equivalence_enabled": true
+  },
+  "items": [
+    { "item_id": 1, "score": "YES"|"NO", "observability": "OBSERVED"|"ASSUMED", "evidence": string },
+    ...
+    {
+      "item_id": 12,
+      "score": 1|2|3|4|5,
+      "observability": "OBSERVED",
+      "evidence": {
+        "flow_organization": "organized"|"mixed"|"disorganized",
+        "wasted_motion_events": [
+          { "type": "regrasp"|"needle_reload_adjustment"|"instrument_search"|"pause_reset"|"other",
+            "count_estimate": number,
+            "note": string
+          }
+        ]
+      }
+    },
+    { "item_id": 13, "score": "YES"|"NO", "observability": "DERIVED", "evidence": { "red_lines_triggered": [string] } },
+    { "item_id": 14, "score": string, "observability": "OBSERVED", "evidence": { "coaching_tags": [string] } }
+  ]
+}
+
+ITEM DEFINITIONS:
+
+Items 1–4 (setup; often off-screen):
+- If FOR indicates the step is not shown or unknown, score YES with observability="ASSUMED" and explain.
+
+Item 2 (back wall injury):
+- Score NO only if FOR indicates posterior wall catch or through-and-through observed.
+- If unknown, default YES (ASSUMED).
+
+Item 5 (heel establishment; equivalence + observability guardrail):
+Intent: heel is established and remains aligned such that progression occurs without twist/edge mismatch/gaping at heel.
+Score YES if:
+- Pathway 5A: start_location is heel AND heel alignment appears stable, OR
+- Pathway 5B: start not clearly double-armed but heel alignment remains stable during closure (no twist/mismatch/gaping attributable to the start), OR
+- Pathway 5C: initial fixation not visible/ambiguous -> default YES (ASSUMED) unless there is clear downstream heel defect.
+Score NO only if OBSERVED:
+- 5N1: persistent heel defect (twist/edge mismatch/gaping) not corrected, OR
+- 5N2: toe anchoring strategy causes demonstrated heel difficulty/defect.
+Do NOT score NO merely because suture_configuration is "single_armed" or "unknown".
+
+Item 6 (heel knot outside):
+- Score NO only if heel_knot_location is inside. Unknown -> YES (ASSUMED).
+
+Item 7 (right-angle/transfer; non-gating method item):
+Intent: safe progression to opposite side without twist or tissue injury.
+Score YES if:
+- right_angle used, OR
+- equivalent safe progression (no twist/crossing; no snag/tear), OR
+- method makes pass irrelevant (e.g., single-armed continuous) AND back wall completed without twist.
+Score NO only if twist/crossing or snag/tear is observed and consequential.
+
+Item 8 (posterior wall functional spacing):
+Score YES if:
+- posterior wall completed AND visible_gaps is false AND spacing_uniformity is not "irregular".
+Score NO if:
+- not completed OR visible_gaps true OR spacing_uniformity "irregular".
+If any of these fields are unknown -> YES (ASSUMED) under policy.
+
+Item 9 (toe trimming/apex):
+Score YES if fit_appears_appropriate true AND dog_ear_or_redundancy not true, regardless of whether trimming_observed.
+Score NO only if fit_appears_appropriate false OR dog_ear_or_redundancy true.
+Unknown -> YES (ASSUMED).
+
+Item 10 (anterior wall functional spacing):
+Same as item 8.
+
+Item 11 (final knot):
+Score NO only if knot_location is inside OR appears_seated is false (if available).
+Unknown -> YES (ASSUMED).
+
+Item 12 (Economy):
+- NOT speed.
+- Must output flow_organization and 0–5 wasted_motion_events (no duplicates).
+- Multiple tiny needle angle micro-adjustments count as ONE event unless they cause repeated failed passes/resets.
+Guardrail mapping:
+- Score 4: organized + 0–1 events + no instrument_search or pause_reset.
+- Score 3: organized/mixed + 2–3 events OR single pause_reset without repetition.
+- Score 2: mixed/disorganized + 4–5 events OR includes repeated pause_reset or instrument_search.
+- Score 1: disorganized + repeated resets/searching + frequent handling.
+- Score 5 allowed only if organized + 0 events + uninterrupted flow (use sparingly).
+
+Item 13 (Proficiency; DERIVED; do not use general impressions):
+Set score NO if any OBSERVED red-line is present:
+RL-A: item 8 = NO
+RL-B: item 10 = NO
+RL-C: item 2 = NO
+RL-D: item 11 = NO
+RL-E: item 5 = NO (only if NO is based on 5N1/5N2 observed consequence)
+Otherwise YES.
+Evidence must list red_lines_triggered (empty if YES).
+Item 12 does not affect item 13.
+
+Item 14 (Comments + coaching tags):
+Provide:
+- One sentence summarizing outcome (approximation/heel/toe/knots).
+- Up to 3 coaching_tags selected from:
+  ARTERIOTOMY_TOO_SHORT
+  SPATULATION_CONCAVE_GEOMETRY
+  SUTURE_GRASPED_WITH_FORCEPS_OR_PICKUPS
+  TIE_DIRECTLY_ON_TOE
+  NEEDLE_DIRECTION_REVERSED
+  ASSISTANT_QUALITY_IMPACT
+  SPACING_TOO_CLOSE
+  SPACING_CAN_BE_WIDER
+If FOR does not support a tag, do not include it.

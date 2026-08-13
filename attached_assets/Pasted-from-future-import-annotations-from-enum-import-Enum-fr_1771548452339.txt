@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+from enum import Enum
+from typing import List, Literal, Union, Any
+from pydantic import BaseModel, Field, conint, confloat, model_validator
+
+
+class YesNo(str, Enum):
+    YES = "YES"
+    NO = "NO"
+
+
+class ObservabilityStd(str, Enum):
+    OBSERVED = "OBSERVED"
+    ASSUMED = "ASSUMED"
+
+
+class ObservabilityDerived(str, Enum):
+    DERIVED = "DERIVED"
+
+
+class FlowOrganization(str, Enum):
+    organized = "organized"
+    mixed = "mixed"
+    disorganized = "disorganized"
+
+
+class WastedMotionType(str, Enum):
+    regrasp = "regrasp"
+    needle_reload_adjustment = "needle_reload_adjustment"
+    instrument_search = "instrument_search"
+    pause_reset = "pause_reset"
+    other = "other"
+
+
+class CoachingTag(str, Enum):
+    ARTERIOTOMY_TOO_SHORT = "ARTERIOTOMY_TOO_SHORT"
+    SPATULATION_CONCAVE_GEOMETRY = "SPATULATION_CONCAVE_GEOMETRY"
+    SUTURE_GRASPED_WITH_FORCEPS_OR_PICKUPS = "SUTURE_GRASPED_WITH_FORCEPS_OR_PICKUPS"
+    TIE_DIRECTLY_ON_TOE = "TIE_DIRECTLY_ON_TOE"
+    NEEDLE_DIRECTION_REVERSED = "NEEDLE_DIRECTION_REVERSED"
+    ASSISTANT_QUALITY_IMPACT = "ASSISTANT_QUALITY_IMPACT"
+    SPACING_TOO_CLOSE = "SPACING_TOO_CLOSE"
+    SPACING_CAN_BE_WIDER = "SPACING_CAN_BE_WIDER"
+
+
+class Policies(BaseModel):
+    non_observable_defaults_to_yes: Literal[True] = True
+    spacing_rule: Literal["consistent_no_gaping"] = "consistent_no_gaping"
+    technique_equivalence_enabled: Literal[True] = True
+
+
+class WastedMotionEvent(BaseModel):
+    type: WastedMotionType
+    count_estimate: confloat(ge=0)  # float >= 0
+    note: str
+
+
+class EconomyEvidence(BaseModel):
+    flow_organization: FlowOrganization
+    wasted_motion_events: List[WastedMotionEvent] = Field(default_factory=list, max_length=5)
+
+
+class ItemBase(BaseModel):
+    item_id: int
+
+
+class Item1to11(ItemBase):
+    item_id: conint(ge=1, le=11)
+    score: YesNo
+    observability: ObservabilityStd
+    evidence: str
+
+
+class Item12(ItemBase):
+    item_id: Literal[12] = 12
+    score: conint(ge=1, le=5)
+    observability: Literal["OBSERVED"] = "OBSERVED"
+    evidence: EconomyEvidence
+
+
+class Item13Evidence(BaseModel):
+    red_lines_triggered: List[str] = Field(default_factory=list)
+
+
+class Item13(ItemBase):
+    item_id: Literal[13] = 13
+    score: YesNo
+    observability: Literal["DERIVED"] = "DERIVED"
+    evidence: Item13Evidence
+
+
+class Item14Evidence(BaseModel):
+    coaching_tags: List[CoachingTag] = Field(default_factory=list, max_length=3)
+
+
+class Item14(ItemBase):
+    item_id: Literal[14] = 14
+    score: str
+    observability: Literal["OBSERVED"] = "OBSERVED"
+    evidence: Item14Evidence
+
+
+Item = Union[Item1to11, Item12, Item13, Item14]
+
+
+class VopDocxV41Output(BaseModel):
+    case_id: str
+    rubric_version: Literal["vop_docx_v4_1"] = "vop_docx_v4_1"
+    policies: Policies
+    items: List[Item]
+
+    @model_validator(mode="after")
+    def validate_items(self) -> "VopDocxV41Output":
+        if len(self.items) != 14:
+            raise ValueError("items must contain exactly 14 elements")
+
+        ids = [it.item_id for it in self.items]
+        if set(ids) != set(range(1, 15)):
+            raise ValueError("items must include exactly one of each item_id 1..14")
+
+        # Optional: ensure no duplicate item_ids
+        if len(set(ids)) != 14:
+            raise ValueError("duplicate item_id values found")
+
+        return self

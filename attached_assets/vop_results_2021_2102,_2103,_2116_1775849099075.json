@@ -1,0 +1,471 @@
+[
+  {
+    "case_id": "2103",
+    "rubric_version": "vop_moderated_v1",
+    "evidence_based": {
+      "items": [
+        {
+          "item_id": 1,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Arteriotomy creation was not observed and the resulting shape was not visible in the video segment."
+        },
+        {
+          "item_id": 2,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "No suturing was observed to evaluate for back wall injury."
+        },
+        {
+          "item_id": 3,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Graft spatulation was not observed and the graft shape was not visible in the video segment."
+        },
+        {
+          "item_id": 4,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Suture packaging and setup were not shown."
+        },
+        {
+          "item_id": 5,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Initial suture placement and heel establishment were not observed."
+        },
+        {
+          "item_id": 6,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Heel knot location was not observed."
+        },
+        {
+          "item_id": 7,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "The transfer maneuver to the opposite wall was not observed.",
+          "subitems": {
+            "7a_right_angle_method": {
+              "score": "NULL",
+              "evidence": "Instrument use for transfer not observed."
+            },
+            "7b_safe_transfer_outcome": {
+              "score": "NULL",
+              "evidence": "Transfer outcome not observed."
+            }
+          }
+        },
+        {
+          "item_id": 8,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Posterior wall suturing was not observed."
+        },
+        {
+          "item_id": 9,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Toe/apex fit and suturing were not observed."
+        },
+        {
+          "item_id": 10,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Anterior wall suturing was not observed."
+        },
+        {
+          "item_id": 11,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Final knot placement and seating were not observed."
+        },
+        {
+          "item_id": 12,
+          "score": 4,
+          "observability": "OBSERVED",
+          "evidence": {
+            "flow_organization": "organized",
+            "wasted_motion_events": [],
+            "economy_index": 0
+          }
+        },
+        {
+          "item_id": 13,
+          "score": "INSUFFICIENT_EVIDENCE",
+          "observability": "DERIVED",
+          "evidence": {
+            "red_lines_triggered": [],
+            "missing_core_domains": [
+              "2",
+              "8",
+              "10",
+              "11"
+            ]
+          }
+        },
+        {
+          "item_id": 14,
+          "score": "The video segment ends before the procedure begins, providing no evidence for the anastomosis steps.",
+          "observability": "OBSERVED",
+          "evidence": {
+            "coaching_tags": []
+          }
+        }
+      ],
+      "coverage": {
+        "observed_count": 0,
+        "total_count": 11,
+        "observed_percent": 0.0,
+        "core_observed": {
+          "2": false,
+          "8": false,
+          "10": false,
+          "11": false
+        }
+      }
+    },
+    "projected_docx": {
+      "mode": "construct_mode",
+      "items_1_11": {
+        "1": "YES",
+        "2": "YES",
+        "3": "YES",
+        "4": "YES",
+        "5": "YES",
+        "6": "YES",
+        "7": "YES",
+        "8": "YES",
+        "9": "YES",
+        "10": "YES",
+        "11": "YES"
+      },
+      "economy_1_4": 4,
+      "proficiency_yes_no": "YES",
+      "projection_notes": [
+        "Item 1: construct_mode projects NULL to YES (setup)",
+        "Item 2: construct_mode projects NULL to YES (setup)",
+        "Item 3: construct_mode projects NULL to YES (setup)",
+        "Item 4: construct_mode projects NULL to YES (setup)",
+        "Item 5: projected NULL to YES",
+        "Item 6: projected NULL to YES",
+        "Item 7: construct_mode projects NULL 7b to YES (outcome)",
+        "Item 8: core domain not observed; projected with uncertainty",
+        "Item 9: projected NULL to YES",
+        "Item 10: core domain not observed; projected with uncertainty",
+        "Item 11: core domain not observed; projected with uncertainty"
+      ]
+    }
+  },
+  {
+    "case_id": "2102",
+    "rubric_version": "vop_moderated_v1",
+    "evidence_based": {
+      "items": [
+        {
+          "item_id": 1,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "Arteriotomy incision was observed as linear and oblique, performed with an 11 blade and extended with scissors."
+        },
+        {
+          "item_id": 2,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "No posterior wall catch or through-and-through injury was observed."
+        },
+        {
+          "item_id": 3,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "Graft spatulation was observed resulting in a pointed toe and rounded heel shape."
+        },
+        {
+          "item_id": 4,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "Suture packaging and setup were visible on camera."
+        },
+        {
+          "item_id": 5,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "Suture was started at the heel with stable alignment and no observed mismatch."
+        },
+        {
+          "item_id": 6,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "The heel knot was tied on the outside."
+        },
+        {
+          "item_id": 7,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "Transfer was successfully achieved without twist or tissue trauma.",
+          "subitems": {
+            "7a_right_angle_method": {
+              "score": "NO",
+              "evidence": "Forceps were used for the transfer maneuver instead of a right-angle instrument."
+            },
+            "7b_safe_transfer_outcome": {
+              "score": "YES",
+              "evidence": "No twist, crossing, or tissue snagging was observed during the transfer."
+            }
+          }
+        },
+        {
+          "item_id": 8,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "The posterior wall was completed with uniform spacing and no visible gaps."
+        },
+        {
+          "item_id": 9,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "The toe fit appears appropriate with no dog-ear or redundancy noted."
+        },
+        {
+          "item_id": 10,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "The anterior wall was completed with uniform spacing and no visible gaps."
+        },
+        {
+          "item_id": 11,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "The final knot was tied on the outside and appeared properly seated."
+        },
+        {
+          "item_id": 12,
+          "score": 3,
+          "observability": "OBSERVED",
+          "evidence": {
+            "flow_organization": "organized",
+            "wasted_motion_events": [
+              {
+                "type": "pause_reset",
+                "count_estimate": 1,
+                "note": "brief pause to adjust graft position before starting anterior wall"
+              }
+            ],
+            "economy_index": 2
+          }
+        },
+        {
+          "item_id": 13,
+          "score": "PROFICIENT",
+          "observability": "DERIVED",
+          "evidence": {
+            "red_lines_triggered": [],
+            "missing_core_domains": []
+          }
+        },
+        {
+          "item_id": 14,
+          "score": "The anastomosis was performed with high technical proficiency, showing clean tissue preparation and uniform suture placement.",
+          "observability": "OBSERVED",
+          "evidence": {
+            "coaching_tags": []
+          }
+        }
+      ],
+      "coverage": {
+        "observed_count": 11,
+        "total_count": 11,
+        "observed_percent": 100.0,
+        "core_observed": {
+          "2": true,
+          "8": true,
+          "10": true,
+          "11": true
+        }
+      }
+    },
+    "projected_docx": {
+      "mode": "construct_mode",
+      "items_1_11": {
+        "1": "YES",
+        "2": "YES",
+        "3": "YES",
+        "4": "YES",
+        "5": "YES",
+        "6": "YES",
+        "7": "YES",
+        "8": "YES",
+        "9": "YES",
+        "10": "YES",
+        "11": "YES"
+      },
+      "economy_1_4": 3,
+      "proficiency_yes_no": "YES",
+      "projection_notes": []
+    }
+  },
+  {
+    "case_id": "2116",
+    "rubric_version": "vop_moderated_v1",
+    "evidence_based": {
+      "items": [
+        {
+          "item_id": 1,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Neither the incision action nor the resulting arteriotomy shape were visible in the video."
+        },
+        {
+          "item_id": 2,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "No posterior wall catch or through-and-through suture placement was observed."
+        },
+        {
+          "item_id": 3,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Neither the spatulation action nor the resulting graft shape were visible in the video."
+        },
+        {
+          "item_id": 4,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Suture packaging and setup were not shown."
+        },
+        {
+          "item_id": 5,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "The procedure was observed starting at the heel."
+        },
+        {
+          "item_id": 6,
+          "score": "YES",
+          "observability": "OBSERVED",
+          "evidence": "The heel knot was observed to be located on the outside."
+        },
+        {
+          "item_id": 7,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "The transfer maneuver was not observed.",
+          "subitems": {
+            "7a_right_angle_method": {
+              "score": "NULL",
+              "evidence": "Transfer maneuver not observed."
+            },
+            "7b_safe_transfer_outcome": {
+              "score": "NULL",
+              "evidence": "Transfer outcome could not be evaluated."
+            }
+          }
+        },
+        {
+          "item_id": 8,
+          "score": "NO",
+          "observability": "OBSERVED",
+          "evidence": "The posterior wall was not completed in the observed segment."
+        },
+        {
+          "item_id": 9,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "Toe/apex fit could not be determined."
+        },
+        {
+          "item_id": 10,
+          "score": "NO",
+          "observability": "OBSERVED",
+          "evidence": "The anterior wall was not completed in the observed segment."
+        },
+        {
+          "item_id": 11,
+          "score": "NULL",
+          "observability": "NOT_OBSERVED",
+          "evidence": "The final knot was not observed."
+        },
+        {
+          "item_id": 12,
+          "score": 2,
+          "observability": "OBSERVED",
+          "evidence": {
+            "flow_organization": "organized",
+            "wasted_motion_events": [
+              {
+                "type": "failed_pass_sequence",
+                "count_estimate": 1,
+                "note": "08:55 needle slips twice before successful bite"
+              },
+              {
+                "type": "instrument_search",
+                "count_estimate": 1,
+                "note": "10:40 fumbling with forceps and needle positioning"
+              }
+            ],
+            "economy_index": 4
+          }
+        },
+        {
+          "item_id": 13,
+          "score": "NOT_PROFICIENT",
+          "observability": "DERIVED",
+          "evidence": {
+            "red_lines_triggered": [
+              "Item 8: Posterior wall not completed",
+              "Item 10: Anterior wall not completed"
+            ],
+            "missing_core_domains": [
+              "11"
+            ]
+          }
+        },
+        {
+          "item_id": 14,
+          "score": "The anastomosis was incomplete in the provided segment, with both walls unfinished.",
+          "observability": "OBSERVED",
+          "evidence": {
+            "coaching_tags": []
+          }
+        }
+      ],
+      "coverage": {
+        "observed_count": 5,
+        "total_count": 11,
+        "observed_percent": 45.5,
+        "core_observed": {
+          "2": true,
+          "8": true,
+          "10": true,
+          "11": false
+        }
+      }
+    },
+    "projected_docx": {
+      "mode": "construct_mode",
+      "items_1_11": {
+        "1": "YES",
+        "2": "YES",
+        "3": "YES",
+        "4": "YES",
+        "5": "YES",
+        "6": "YES",
+        "7": "YES",
+        "8": "NO",
+        "9": "YES",
+        "10": "NO",
+        "11": "YES"
+      },
+      "economy_1_4": 2,
+      "proficiency_yes_no": "NO",
+      "projection_notes": [
+        "Item 1: construct_mode projects NULL to YES (setup)",
+        "Item 3: construct_mode projects NULL to YES (setup)",
+        "Item 4: construct_mode projects NULL to YES (setup)",
+        "Item 7: construct_mode projects NULL 7b to YES (outcome)",
+        "Item 9: projected NULL to YES",
+        "Item 11: core domain not observed; projected with uncertainty"
+      ]
+    }
+  }
+]

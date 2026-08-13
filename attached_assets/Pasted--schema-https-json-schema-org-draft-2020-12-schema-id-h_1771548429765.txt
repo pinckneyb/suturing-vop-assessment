@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/vop_docx_v4_1.schema.json",
+  "title": "VOP DOCX Retrospective Scorer v4.1 Output",
+  "type": "object",
+  "required": ["case_id", "rubric_version", "policies", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "case_id": { "type": "string", "minLength": 1 },
+    "rubric_version": { "const": "vop_docx_v4_1" },
+    "policies": {
+      "type": "object",
+      "required": [
+        "non_observable_defaults_to_yes",
+        "spacing_rule",
+        "technique_equivalence_enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "non_observable_defaults_to_yes": { "const": true },
+        "spacing_rule": { "const": "consistent_no_gaping" },
+        "technique_equivalence_enabled": { "const": true }
+      }
+    },
+    "items": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 14,
+      "items": { "$ref": "#/$defs/item" },
+      "allOf": [
+        {
+          "description": "Ensure exactly one of each item_id 1..14 exists.",
+          "contains": { "$ref": "#/$defs/item_id_1" }
+        },
+        { "contains": { "$ref": "#/$defs/item_id_2" } },
+        { "contains": { "$ref": "#/$defs/item_id_3" } },
+        { "contains": { "$ref": "#/$defs/item_id_4" } },
+        { "contains": { "$ref": "#/$defs/item_id_5" } },
+        { "contains": { "$ref": "#/$defs/item_id_6" } },
+        { "contains": { "$ref": "#/$defs/item_id_7" } },
+        { "contains": { "$ref": "#/$defs/item_id_8" } },
+        { "contains": { "$ref": "#/$defs/item_id_9" } },
+        { "contains": { "$ref": "#/$defs/item_id_10" } },
+        { "contains": { "$ref": "#/$defs/item_id_11" } },
+        { "contains": { "$ref": "#/$defs/item_id_12" } },
+        { "contains": { "$ref": "#/$defs/item_id_13" } },
+        { "contains": { "$ref": "#/$defs/item_id_14" } }
+      ]
+    }
+  },
+  "$defs": {
+    "yes_no": { "type": "string", "enum": ["YES", "NO"] },
+    "observability_std": { "type": "string", "enum": ["OBSERVED", "ASSUMED"] },
+    "observability_derived": { "type": "string", "enum": ["DERIVED"] },
+
+    "wasted_motion_event": {
+      "type": "object",
+      "required": ["type", "count_estimate", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "regrasp",
+            "needle_reload_adjustment",
+            "instrument_search",
+            "pause_reset",
+            "other"
+          ]
+        },
+        "count_estimate": { "type": "number", "minimum": 0 },
+        "note": { "type": "string" }
+      }
+    },
+
+    "economy_evidence": {
+      "type": "object",
+      "required": ["flow_organization", "wasted_motion_events"],
+      "additionalProperties": false,
+      "properties": {
+        "flow_organization": {
+          "type": "string",
+          "enum": ["organized", "mixed", "disorganized"]
+        },
+        "wasted_motion_events": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/wasted_motion_event" }
+        }
+      }
+    },
+
+    "item": {
+      "type": "object",
+      "required": ["item_id", "score", "observability", "evidence"],
+      "additionalProperties": false,
+      "oneOf": [
+        { "$ref": "#/$defs/item_1_11" },
+        { "$ref": "#/$defs/item_12" },
+        { "$ref": "#/$defs/item_13" },
+        { "$ref": "#/$defs/item_14" }
+      ]
+    },
+
+    "item_1_11": {
+      "type": "object",
+      "required": ["item_id", "score", "observability", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "item_id": { "type": "integer", "minimum": 1, "maximum": 11 },
+        "score": { "$ref": "#/$defs/yes_no" },
+        "observability": { "$ref": "#/$defs/observability_std" },
+        "evidence": { "type": "string" }
+      }
+    },
+
+    "item_12": {
+      "type": "object",
+      "required": ["item_id", "score", "observability", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "item_id": { "const": 12 },
+        "score": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "observability": { "const": "OBSERVED" },
+        "evidence": { "$ref": "#/$defs/economy_evidence" }
+      }
+    },
+
+    "item_13": {
+      "type": "object",
+      "required": ["item_id", "score", "observability", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "item_id": { "const": 13 },
+        "score": { "$ref": "#/$defs/yes_no" },
+        "observability": { "$ref": "#/$defs/observability_derived" },
+        "evidence": {
+          "type": "object",
+          "required": ["red_lines_triggered"],
+          "additionalProperties": false,
+          "properties": {
+            "red_lines_triggered": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "item_14": {
+      "type": "object",
+      "required": ["item_id", "score", "observability", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "item_id": { "const": 14 },
+        "score": { "type": "string" },
+        "observability": { "const": "OBSERVED" },
+        "evidence": {
+          "type": "object",
+          "required": ["coaching_tags"],
+          "additionalProperties": false,
+          "properties": {
+            "coaching_tags": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ARTERIOTOMY_TOO_SHORT",
+                  "SPATULATION_CONCAVE_GEOMETRY",
+                  "SUTURE_GRASPED_WITH_FORCEPS_OR_PICKUPS",
+                  "TIE_DIRECTLY_ON_TOE",
+                  "NEEDLE_DIRECTION_REVERSED",
+                  "ASSISTANT_QUALITY_IMPACT",
+                  "SPACING_TOO_CLOSE",
+                  "SPACING_CAN_BE_WIDER"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "item_id_1": { "type": "object", "properties": { "item_id": { "const": 1 } }, "required": ["item_id"] },
+    "item_id_2": { "type": "object", "properties": { "item_id": { "const": 2 } }, "required": ["item_id"] },
+    "item_id_3": { "type": "object", "properties": { "item_id": { "const": 3 } }, "required": ["item_id"] },
+    "item_id_4": { "type": "object", "properties": { "item_id": { "const": 4 } }, "required": ["item_id"] },
+    "item_id_5": { "type": "object", "properties": { "item_id": { "const": 5 } }, "required": ["item_id"] },
+    "item_id_6": { "type": "object", "properties": { "item_id": { "const": 6 } }, "required": ["item_id"] },
+    "item_id_7": { "type": "object", "properties": { "item_id": { "const": 7 } }, "required": ["item_id"] },
+    "item_id_8": { "type": "object", "properties": { "item_id": { "const": 8 } }, "required": ["item_id"] },
+    "item_id_9": { "type": "object", "properties": { "item_id": { "const": 9 } }, "required": ["item_id"] },
+    "item_id_10": { "type": "object", "properties": { "item_id": { "const": 10 } }, "required": ["item_id"] },
+    "item_id_11": { "type": "object", "properties": { "item_id": { "const": 11 } }, "required": ["item_id"] },
+    "item_id_12": { "type": "object", "properties": { "item_id": { "const": 12 } }, "required": ["item_id"] },
+    "item_id_13": { "type": "object", "properties": { "item_id": { "const": 13 } }, "required": ["item_id"] },
+    "item_id_14": { "type": "object", "properties": { "item_id": { "const": 14 } }, "required": ["item_id"] }
+  }
+}

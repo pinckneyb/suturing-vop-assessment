@@ -1,0 +1,9 @@
+# OpenAI API Configuration
+# Get your API key from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Optional: Custom API base URL (if using Azure OpenAI or other providers)
+# OPENAI_API_BASE=https://your-endpoint.openai.azure.com/
+
+# Optional: Custom model name (defaults to gpt-4o)
+# OPENAI_MODEL=gpt-4o

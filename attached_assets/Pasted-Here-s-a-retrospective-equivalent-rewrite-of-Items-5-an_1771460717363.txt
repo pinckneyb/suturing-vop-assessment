@@ -1,0 +1,101 @@
+Here’s a “retrospective-equivalent” rewrite of Items 5 and 7 that will track what retrospective surgeon raters typically credit, while still letting your AI flag true technical problems. I’m keeping the DOCX numbering so outputs remain apples-to-apples, but I’m changing the operational definitions and the evidence requirements.
+
+Item 5 retrospective-equivalent definition
+DOCX text: “Correctly places double-ended suture at heel of anastomosis”
+
+Core construct (what the surgeon is probably rewarding):
+Correct establishment and fixation of the heel such that graft and arteriotomy are aligned and the anastomosis can be progressed without malalignment, twisting, or gaping.
+
+Score “Yes” if ANY of the following are true:
+A) Classic method observed
+
+Double-armed/double-ended suture is used and the first stitch is placed at the heel with correct alignment.
+
+B) Equivalent method observed (single-armed acceptable)
+
+A single-armed suture is used, but the first stitch and initial tie-down clearly establish the heel correctly (graft and arteriotomy edges are aligned at the heel), AND
+
+The subsequent suturing proceeds with stable alignment (no twisting, no heel “walk-off,” no gross gap at the heel).
+
+Score “No” only if:
+
+The initial fixation is not at the heel (clearly starts elsewhere in a way that compromises heel geometry for this station), OR
+
+Heel alignment is incorrect (edge mismatch, twisting, inversion/eversion problems) and is not corrected, OR
+
+The heel fixation is unstable (knot slips, graft shifts) leading to malapposition.
+
+Score “Unable” only if:
+
+The initial fixation moment is not visible and the heel region cannot be evaluated later (i.e., you cannot judge heel alignment from the later product).
+
+Evidence requirements:
+
+State whether double-armed was observed or whether you are crediting an equivalent single-armed start.
+
+Describe heel alignment outcome (e.g., “heel edges aligned; no twist; no gaping during progression”).
+
+Why this helps your 1518 mismatch:
+It prevents the AI from failing item 5 purely because it saw “single-armed,” which is a method choice, not necessarily a proficiency deficit in retrospective scoring.
+
+Item 7 retrospective-equivalent definition
+DOCX text: “Uses right angle to pass one end of the suture to opposite side of heel”
+
+Core construct:
+Safe transfer/progression to the opposite side of the heel so the posterior wall can be completed without twisting the suture line or traumatizing tissue.
+
+Score “Yes” if ANY of the following are true:
+A) Classic instrument observed
+
+A right-angle clamp (or equivalent right-angle instrument) is used to pass the suture end to the opposite side.
+
+B) Equivalent safe transfer observed (instrument-agnostic)
+
+The suture end is transferred/progressed to the opposite side using another instrument or manual technique, AND ALL are true:
+
+No visible tissue tearing/snags during the pass
+
+No lumen entry or “hooking” that risks intimal injury
+
+No suture twist/crossing that distorts heel alignment
+
+The back-wall run can proceed appropriately from the correct side
+
+C) Not applicable because method doesn’t require a “pass”
+
+If a single-armed continuous technique is used where “passing the other end” is inherently irrelevant, score “Yes” provided:
+
+The heel is stable (Item 5 = Yes),
+
+The back wall is completed appropriately (Item 8 = Yes under your spacing rule),
+
+There is no evidence of twist/malalignment attributable to failure to transfer.
+
+Score “No” only if:
+
+Failure to transfer/progress causes malalignment, twisting, or inability to complete the back wall correctly, OR
+
+The attempt at transfer is unsafe (snagging/tearing/lumen intrusion) and materially affects the anastomosis.
+
+Score “Unable” only if:
+
+The relevant heel/progression moment is not visible and you cannot infer success from later alignment/back-wall completion.
+
+Evidence requirements:
+
+Explicitly state which “Yes” pathway you used (A, B, or C).
+
+Cite the observable outcome (alignment maintained; back wall completed without twist).
+
+Why this helps your 1518 mismatch:
+It stops the AI from treating “no right angle used” or “single-armed technique” as an automatic failure when the retrospective surgeon likely credited the intent/outcome.
+
+How to keep outputs apples-to-apples
+
+Keep the item labels as in DOCX, but include an “equivalence_pathway” field in your internal JSON so you can audit how often you’re granting equivalence.
+Example:
+
+{"item": 7, "score": "Yes", "equivalence_pathway": "C", "evidence": "Single-armed continuous; no separate pass needed; heel stable; back wall completed without twist."}
+
+One caution
+If you relax Items 5 and 7 like this, you must ensure Item 2 (back wall injury), Item 8/10 (approximation/spacing outcome), and knot security (6/11) remain the real gates. Otherwise you risk matching retrospective “Yes” calls by ignoring technique errors that do matter clinically.

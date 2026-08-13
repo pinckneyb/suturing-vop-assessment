@@ -1,0 +1,14 @@
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "google-genai>=1.51.0",
+    "pillow>=10.0.0",
+    "python-docx>=1.2.0",
+    "reportlab>=5.0.0",
+    "requests>=2.31.0",
+    "streamlit>=1.52.2",
+    "tenacity>=8.2.3",
+]

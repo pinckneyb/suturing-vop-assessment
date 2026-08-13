@@ -1,0 +1,4 @@
+- [2023 VOP rubric standard](vop-2023-rubric.md) — app scores ONLY the 2023 13-item rubric (vop_2023_v1); legacy 14-item saved sessions are gated as display-only, never renumbered.
+- [Gemini model availability](gemini-model-availability.md) — preview models get retired (404); verify IDs via models.list; fps>1 needs proportionally shorter segments.
+- [Gemini upload reliability](gemini-upload-reliability.md) — set upload timeouts client-wide on genai.Client; per-request HttpOptions in UploadFileConfig 404s the upload.
+- [Gemini transient errors](gemini-transient-errors.md) — retry 503/504/unavailable on generate_content, not just 429s; demand spikes can outlast 5 backoff attempts.

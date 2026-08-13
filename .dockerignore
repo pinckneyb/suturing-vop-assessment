@@ -1,0 +1,41 @@
+# CRITICAL: Exclude pip cache directories (9GB+)
+.pythonlibs/
+.cache/
+.venv/
+.upm/
+__pycache__/
+*.pyc
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+
+# Test and config files
+test_*.py
+launcher.py
+config.example
+LICENSE
+timeline_*.json
+
+# Large files and media
+*.M4V
+*.mp4
+*.mov
+*.avi
+*.webm
+
+# Temporary and user data
+temp_videos/
+attached_assets/
+surgical-vop-assessment/saved_results/
+
+# Legacy files
+surgical-vop-assessment/batch_manager.py
+surgical-vop-assessment/profiles.py
+surgical-vop-assessment/surgical_report_generator.py
+surgical-vop-assessment/surgical_vop_app.py
+surgical-vop-assessment/surgical_vop_app_fixed.py
+surgical-vop-assessment/utils.py

@@ -1,0 +1,53 @@
+Right now your “Economy of Time and Motion” score is behaving like a different instrument than the surgeon’s. You’ve solved most checklist alignment by changing scoring rules; economy needs its own calibration, and you should treat it as a separate model-output problem.
+
+Three practical fixes that work in this exact situation:
+
+Anchor the model to the surgeon’s 1/3/5 examples, but add a “speed vs waste” separation
+Your AI is likely penalizing slowness (pauses, careful re-grasps) as “wasted motion,” while at least one surgeon (818) appears to reward careful, organized flow even if it isn’t fast.
+
+Update the prompt so economy is scored on two subcomponents, then mapped to 1–5:
+
+Motion waste (reaching, searching, unnecessary repositioning, redundant instrument swaps)
+
+Flow organization (clear plan, consistent hand positioning, no loss of orientation)
+Then: “Do not penalize slow pace unless it causes extra wasted motion or repeated resets.”
+
+Map to 1–5 with a rule like:
+
+5 = low waste + high organization
+
+4 = low waste + mostly organized (minor waste)
+
+3 = moderate waste OR moderate organization
+
+2 = frequent waste OR disorganized flow
+
+1 = frequent waste + disorganized flow
+
+This stops “slow but clean” from automatically becoming 2/5.
+
+Force evidence-based scoring with a fixed count of “wasted-motion events”
+Make the AI justify economy with a small tally. Example:
+
+“List up to 5 wasted-motion events you observed. If you cannot list at least:
+
+1 event → economy must be 4–5
+
+2–3 events → economy must be 3
+
+4–5 events → economy must be 1–2
+
+Do not reuse the same event description twice.”
+
+This usually prevents over-penalizing with vague language (“frequent micro-adjustments”) and makes the score auditable.
+
+Calibrate by regression to your surgeon set (simple and effective)
+You already have paired surgeon/AI economy scores for multiple cases. Use them to fit a simple correction:
+
+Collect (AI score, surgeon score) for 30–50 videos.
+
+Fit a linear mapping or isotonic calibration (monotonic).
+
+Apply that mapping to future AI economy scores.
+
+This is low-effort and tends to eliminate systematic bias quickly. It also reveals whether the issue is global (always too low/high) or conditional (e.g., only for certain camera views, needle drivers, or task segments).
